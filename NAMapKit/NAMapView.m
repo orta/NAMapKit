@@ -22,25 +22,11 @@
 @property (nonatomic, strong) NSMutableArray *annotationViews;
 @property (nonatomic, assign) CGSize          orignalSize;
 
--(void)addAnimatedAnnontation:(NAAnnotation *)annontation;
--(IBAction)showCallOut:(id)sender;
-- (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated;
--(void)hideCallOut;
--(void)handleDoubleTap:(UIGestureRecognizer *)gestureRecognizer;
--(void)handleTwoFingerTap:(UIGestureRecognizer *)gestureRecognizer;
--(void)viewSetup;
--(NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation;
-
 @end
 
 @implementation NAMapView
 
-@synthesize imageView       = _imageView;
-@synthesize orignalSize     = _orignalSize;
-@synthesize calloutView     = _calloutView;
-@synthesize annotationViews = _annotationViews;
-
--(void)viewSetup{
+- (void)viewSetup {
     self.delegate = self;
 
     UITapGestureRecognizer *doubleTap    = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
@@ -74,14 +60,6 @@
 
     }
     return self;
-}
-
-- (void)displayMap:(UIImage *)map {
-    self.imageView.frame = CGRectMake(0.0f, 0.0f, map.size.width, map.size.height);
-
-    CGRect imageFrame    = self.imageView.frame;
-    self.orignalSize     = CGSizeMake(CGRectGetWidth(imageFrame), CGRectGetHeight(imageFrame));
-    self.contentSize     = [self.dataSource imageSizeForImageView:self.imageView];
 }
 
 -(void)addAnimatedAnnontation:(NAAnnotation *)annontation {
@@ -224,6 +202,30 @@
     }
 }
 
+#pragma mark - View Layout
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    if (!self.imageView) return;
+
+    CGSize boundsSize = self.bounds.size;
+    CGRect imageFrame = self.imageView.frame;
+
+    // Center horizontally
+    if (imageFrame.size.width < boundsSize.width)
+        imageFrame.origin.x = (boundsSize.width - imageFrame.size.width) / 2;
+    else
+        imageFrame.origin.x = 0;
+
+    // Center vertically
+    if (imageFrame.size.height < boundsSize.height)
+        imageFrame.origin.y = (boundsSize.height - imageFrame.size.height) / 2;
+    else
+        imageFrame.origin.y = 0;
+
+    self.imageView.frame = imageFrame;
+}
+
 #pragma mark - UIScrollViewDelegate
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
@@ -242,6 +244,12 @@
 	// two-finger tap zooms out, but returns to normal zoom level if it reaches min zoom
 	float newScale = self.zoomScale <= self.minimumZoomScale ? self.maximumZoomScale : self.zoomScale / NA_ZOOM_STEP;
 	[self setZoomScale:newScale animated:YES];
+}
+
+- (void)handleRotate:(UIRotationGestureRecognizer *)recognizer {
+    // Support rotation of the map
+    self.imageView.transform = CGAffineTransformRotate(self.imageView.transform, recognizer.rotation);
+    recognizer.rotation = 0;
 }
 
 @end
