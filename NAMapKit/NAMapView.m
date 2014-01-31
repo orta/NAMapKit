@@ -9,6 +9,7 @@
 #import "NAMapView.h"
 #import "NAPinAnnotationView.h"
 #import "NACallOutView.h"
+#import "NATiledImageView.h"
 
 #define NA_PIN_ANIMATION_DURATION     0.5f
 #define NA_CALLOUT_ANIMATION_DURATION 0.1f
@@ -16,7 +17,7 @@
 
 @interface NAMapView()
 
-@property (nonatomic, strong) UIImageView    *imageView;
+@property (nonatomic, strong) NATiledImageView *imageView;
 @property (nonatomic, strong) NACallOutView  *calloutView;
 @property (nonatomic, strong) NSMutableArray *annotationViews;
 @property (nonatomic, assign) CGSize          orignalSize;
@@ -34,26 +35,26 @@
 
 @implementation NAMapView
 
-@synthesize imageView       = _imageView; 
+@synthesize imageView       = _imageView;
 @synthesize orignalSize     = _orignalSize;
 @synthesize calloutView     = _calloutView;
 @synthesize annotationViews = _annotationViews;
 
 -(void)viewSetup{
     self.delegate = self;
-    
+
     UITapGestureRecognizer *doubleTap    = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
 	UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerTap:)];
-    
+
 	[doubleTap setNumberOfTapsRequired:2];
 	[twoFingerTap setNumberOfTouchesRequired:2];
-    
+
 	[self addGestureRecognizer:doubleTap];
 	[self addGestureRecognizer:twoFingerTap];
-    
-    self.imageView = [[UIImageView alloc] initWithFrame:CGRectZero];
+
+    self.imageView = [[NATiledImageView alloc] initWithDataSource:self.dataSource];
     [self addSubview:self.imageView];
-    
+
     self.calloutView = [[NACallOutView alloc] initOnMapView:self];
     [self addObserver:self.calloutView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
     [self addSubview:self.calloutView];
@@ -65,20 +66,22 @@
     [self viewSetup];
 }
 
-- (id)initWithFrame:(CGRect)frame {
+- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource {
     self = [super initWithFrame:frame];
     if (self) {
+        self.dataSource = dataSource;
         [self viewSetup];
+
     }
     return self;
 }
 
-- (void)displayMap:(UIImage *)map{
+- (void)displayMap:(UIImage *)map {
     self.imageView.frame = CGRectMake(0.0f, 0.0f, map.size.width, map.size.height);
-    self.imageView.image = map;
+
     CGRect imageFrame    = self.imageView.frame;
     self.orignalSize     = CGSizeMake(CGRectGetWidth(imageFrame), CGRectGetHeight(imageFrame));
-    self.contentSize     = self.orignalSize;
+    self.contentSize     = [self.dataSource imageSizeForImageView:self.imageView];
 }
 
 -(void)addAnimatedAnnontation:(NAAnnotation *)annontation {
@@ -86,18 +89,18 @@
 }
 
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate {
-    
+
     NAPinAnnotationView *annontationView = [[NAPinAnnotationView alloc] initWithAnnotation:annotation onMapView:self];
-    
+
     [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchDown];
     [self addObserver:annontationView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
-    
+
     if(animate){
         annontationView.transform = CGAffineTransformTranslate(CGAffineTransformIdentity, 0.0f, -annontationView.center.y);
     }
-    
+
     [self addSubview:annontationView];
-    
+
     if(animate){
         annontationView.animating = YES;
         [UIView animateWithDuration:NA_PIN_ANIMATION_DURATION animations:^{
@@ -107,11 +110,11 @@
             annontationView.animating = NO;
         }];
     }
-    
+
     if(!self.annotationViews){
         self.annotationViews = [[NSMutableArray alloc] init];
     }
-    
+
     [self.annotationViews addObject:annontationView];
     [self bringSubviewToFront:self.calloutView];
 }
@@ -125,7 +128,7 @@
         else{
             [self addAnnotation:annotation animated:NO];
         }
-		
+
 	}
 }
 
@@ -148,24 +151,24 @@
 }
 
 - (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated {
-    
+
     if (annontationView == nil) { return; }
 
     NAAnnotation *annotation = annontationView.annotation;
-    
+
     if(!annotation || !annotation.title) return;
-    
+
     [self hideCallOut];
-    
+
     [self.calloutView setAnnotation:annotation];
-    
+
     [self centreOnPoint:annotation.point animated:animated];
 
     CGFloat animationDuration = animated ? NA_CALLOUT_ANIMATION_DURATION : 0.0f;
-    
+
     self.calloutView.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.4f, 0.4f);
     self.calloutView.hidden    = NO;
-    
+
     [UIView animateWithDuration:animationDuration animations:^{
         self.calloutView.transform = CGAffineTransformIdentity;
     }];
@@ -201,7 +204,7 @@
 	if (!self.dragging) {
 		[self hideCallOut];
 	}
-    
+
 	[super touchesEnded:touches withEvent:event];
 }
 
@@ -215,7 +218,7 @@
     for(NAPinAnnotationView *annotationView in self.annotationViews){
         [self removeObserver:annotationView forKeyPath:@"contentSize"];
     }
-    
+
     if(self.calloutView){
         [self removeObserver:self.calloutView forKeyPath:@"contentSize"];
     }

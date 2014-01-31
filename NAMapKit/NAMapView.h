@@ -9,7 +9,12 @@
 #import <UIKit/UIKit.h>
 #import "NAAnnotation.h"
 
+@protocol NATiledImageViewDataSource;
+
 @interface NAMapView : UIScrollView<UIScrollViewDelegate>
+
+- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
+@property (nonatomic, strong) NSObject <NATiledImageViewDataSource> *dataSource;
 
 - (void)displayMap:(UIImage *)map;
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
