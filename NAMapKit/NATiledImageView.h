@@ -15,12 +15,6 @@
 @end
 
 @interface NATiledImageView : UIView
-
 - (id)initWithDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
-
 @property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
-@property (nonatomic, copy, readonly) NSString *rootFolderPath;
-@property (nonatomic, assign) NSInteger levelsOfDetail;
-@property (nonatomic, assign) NSInteger maxLevelOfDetail;
-
 @end

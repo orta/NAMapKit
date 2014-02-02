@@ -11,7 +11,7 @@
 
 @protocol NATiledImageViewDataSource;
 
-@interface NAMapView : UIScrollView<UIScrollViewDelegate>
+@interface NAMapView : UIScrollView
 
 - (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
 @property (nonatomic, strong) NSObject <NATiledImageViewDataSource> *dataSource;

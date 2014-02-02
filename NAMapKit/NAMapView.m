@@ -15,12 +15,12 @@
 #define NA_CALLOUT_ANIMATION_DURATION 0.1f
 #define NA_ZOOM_STEP                  1.5f
 
-@interface NAMapView()
+@interface NAMapView() <UIScrollViewDelegate>
 
 @property (nonatomic, strong) NATiledImageView *imageView;
 @property (nonatomic, strong) NACallOutView  *calloutView;
+@property (nonatomic, strong) UIView *annotationView;
 @property (nonatomic, strong) NSMutableArray *annotationViews;
-@property (nonatomic, assign) CGSize          orignalSize;
 
 @end
 
@@ -41,10 +41,12 @@
     self.imageView = [[NATiledImageView alloc] initWithDataSource:self.dataSource];
     [self addSubview:self.imageView];
 
+    self.annotationView = [[UIView alloc] initWithFrame:self.imageView.bounds];
+    [self addSubview:self.annotationView];
+
     self.calloutView = [[NACallOutView alloc] initOnMapView:self];
     [self addObserver:self.calloutView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
     [self addSubview:self.calloutView];
-
 }
 
 - (void)awakeFromNib {
@@ -57,7 +59,6 @@
     if (self) {
         self.dataSource = dataSource;
         [self viewSetup];
-
     }
     return self;
 }
@@ -77,7 +78,7 @@
         annontationView.transform = CGAffineTransformTranslate(CGAffineTransformIdentity, 0.0f, -annontationView.center.y);
     }
 
-    [self addSubview:annontationView];
+    [self.annotationView addSubview:annontationView];
 
     if(animate){
         annontationView.animating = YES;
@@ -186,9 +187,10 @@
 	[super touchesEnded:touches withEvent:event];
 }
 
--(CGPoint)zoomRelativePoint:(CGPoint)point{
-    float x = (self.contentSize.width / self.orignalSize.width) * point.x;
-    float y = (self.contentSize.height / self.orignalSize.height) * point.y;
+-(CGPoint)zoomRelativePoint:(CGPoint)point {
+    CGSize originalSize = [self.imageView.dataSource imageSizeForImageView:self.imageView];
+    CGFloat x = (self.contentSize.width / originalSize.width) * point.x;
+    CGFloat y = (self.contentSize.height / originalSize.height) * point.y;
     return CGPointMake(round(x), round(y));
 }
 
@@ -224,6 +226,7 @@
         imageFrame.origin.y = 0;
 
     self.imageView.frame = imageFrame;
+    self.annotationView.frame = imageFrame;
 }
 
 #pragma mark - UIScrollViewDelegate
@@ -244,12 +247,6 @@
 	// two-finger tap zooms out, but returns to normal zoom level if it reaches min zoom
 	float newScale = self.zoomScale <= self.minimumZoomScale ? self.maximumZoomScale : self.zoomScale / NA_ZOOM_STEP;
 	[self setZoomScale:newScale animated:YES];
-}
-
-- (void)handleRotate:(UIRotationGestureRecognizer *)recognizer {
-    // Support rotation of the map
-    self.imageView.transform = CGAffineTransformRotate(self.imageView.transform, recognizer.rotation);
-    recognizer.rotation = 0;
 }
 
 @end

@@ -9,6 +9,10 @@
 #import "NATiledImageView.h"
 #import <QuartzCore/CATiledLayer.h>
 
+@interface NATiledImageView()
+@property (nonatomic, assign) NSInteger maxLevelOfDetail;
+@end
+
 @implementation NATiledImageView
 
 - (id)initWithDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
@@ -18,7 +22,6 @@
     if (!self) return nil;
 
     self.backgroundColor = [UIColor blackColor];
-
     _dataSource = dataSource;
 
     CATiledLayer *layer = (id)[self layer];
@@ -91,10 +94,6 @@
 
 + (Class) layerClass {
     return [CATiledLayer class];
-}
-
-- (void)cleanUp {
-    self.layer.contents = nil;
 }
 
 - (void)setContentScaleFactor:(CGFloat)contentScaleFactor {
