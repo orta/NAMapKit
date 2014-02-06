@@ -8,9 +8,39 @@
 
 #import "NATiledImageView.h"
 #import <QuartzCore/CATiledLayer.h>
+#import <SDWebImage/UIImageView+WebCache.h>
+
+/// Network & local image zooming view
+///
+/// If using NSURL based images, drawrect will trigger a draw in a
+/// tiled area, it will make a NATile and put it in the cache and use
+/// SDWebImage to download the image, then trigger a re-draw in that area.
+
+/// You can optionally use the imageTileForLevel to use local images backing
+/// a async tiled map.
+
+@interface NATile : NSObject
+@property (nonatomic, assign) CGRect tileRect;
+@property (nonatomic, strong) UIImage *tileImage;
+@end
+
+@implementation NATile : NSObject
+- (instancetype)initWithImage:(UIImage *)anImage rect:(CGRect)rect
+{
+    self = [super init];
+    if (self == nil) return nil;
+
+    _tileImage = anImage;
+    _tileRect = rect;
+
+    return self;
+}
+@end
 
 @interface NATiledImageView()
 @property (nonatomic, assign) NSInteger maxLevelOfDetail;
+@property (atomic, strong) NSCache *tileCache;
+@property (atomic, strong) NSMutableArray *operationsArray;
 @end
 
 @implementation NATiledImageView
@@ -36,6 +66,8 @@
     CGSize imagesize = [dataSource imageSizeForImageView:self];
     self.frame = CGRectMake(0, 0, imagesize.width, imagesize.height);
 
+    self.tileCache = [[NSCache alloc] init];
+
     return self;
 }
 
@@ -56,6 +88,7 @@
     // image. One tile at 50% covers the width (in original image coordinates) of two tiles at 100%.
     // So at 50% we need to stretch our tiles to double the width and height; at 25% we need to stretch
     // them to quadruple the width and height; and so on.
+
     // (Note that this means that we are drawing very blurry images as the scale gets low. At 12.5%,
     // our lowest scale, we are stretching about 6 small tiles to fill the entire original image area.
     // But this is okay, because the big blurry image we're drawing here will be scaled way down before
@@ -70,26 +103,47 @@
     NSInteger lastRow = floorf((CGRectGetMaxY(rect)-1) / tileSize.height);
 
     NSInteger level = self.maxLevelOfDetail + roundf(log2f(_scaleX));
+
+    NSMutableArray *requestURLs = [NSMutableArray array];
     for (NSInteger row = firstRow; row <= lastRow; row++) {
         for (NSInteger col = firstCol; col <= lastCol; col++) {
 
-            UIImage *tile = [self.dataSource tiledImageView:self imageTileForLevel:level x:col y:row];
+            CGRect tileRect = CGRectMake(tileSize.width * col, tileSize.height * row, tileSize.width, tileSize.height);
+            BOOL canUseTiledURLs = [self.dataSource respondsToSelector:@selector(tiledImageView:urlForImageTileAtLevel:x:y:)];
 
-            // + 1/scale is to "fix" mystery stitches
-            CGRect tileRect = CGRectMake(tileSize.width * col,
-                    tileSize.height * row,
-                    tileSize.width,
-                    tileSize.height);
-            tileRect = CGRectIntersection(self.bounds, tileRect);
+            UIImage *tileImage = [self.dataSource tiledImageView:self imageTileForLevel:level x:col y:row];
+            NSURL *tileURL = canUseTiledURLs ? [self.dataSource tiledImageView:self urlForImageTileAtLevel:level x:col y:row] : nil;
 
-            [tile drawInRect:tileRect blendMode:kCGBlendModeNormal alpha:1];
+            NATile *tile = [self.tileCache objectForKey:[tileURL absoluteString]];
 
-// Uncomment for debugging borders
-            [[UIColor redColor] set];
-            CGContextSetLineWidth(context, 6.0);
-            CGContextStrokeRect(context, tileRect);
+            if (canUseTiledURLs && !tile) {
+                tileRect = CGRectIntersection(self.bounds, tileRect);
+                tile = [[NATile alloc] initWithImage:nil rect:tileRect];
+
+                //cache the tile and add request url for a later download
+                [self.tileCache setObject:tile forKey:[tileURL absoluteString] cost:level];
+                [requestURLs addObject:tileURL];
+            }
+
+            if (tile.tileImage) {
+                [tile.tileImage drawInRect:tile.tileRect blendMode:kCGBlendModeNormal alpha:1];
+
+// Uncomment to see the tiles
+//                [[UIColor redColor] set];
+//                CGContextSetLineWidth(context, 6.0);
+//                CGContextStrokeRect(context, tileRect);
+            } else {
+                // Prioritise the async tile image above if one exists.
+                [tileImage drawInRect:tileRect blendMode:kCGBlendModeNormal alpha:1];
+            }
         }
     }
+
+    if (requestURLs.count && self && [self isKindOfClass:[NATiledImageView class]]) {
+        // Download all image tiles
+        [self setTileImagesWithURLs:requestURLs];
+    }
+
 }
 
 + (Class) layerClass {
@@ -98,6 +152,63 @@
 
 - (void)setContentScaleFactor:(CGFloat)contentScaleFactor {
     [super setContentScaleFactor:1.f];
+}
+
+
+- (void)setTileImagesWithURLs:(NSArray *)arrayOfURLs
+{
+    __weak typeof(self) wself = self;
+
+    for(NSURL *tileURL in arrayOfURLs) {
+
+        id<SDWebImageOperation> operation = nil;
+        operation = [SDWebImageManager.sharedManager downloadWithURL:tileURL options:0 progress:nil completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished) {
+
+            if (!wself || !finished || error) return;
+
+            void (^block)(void) = ^{
+                __strong typeof(wself) sself = wself;
+                if (!sself) return;
+
+                if (image) {
+                    NATile *tile = [sself.tileCache objectForKey:[tileURL absoluteString]];
+                    if (!tile) return;
+
+                    tile.tileImage = image;
+                    [sself setNeedsDisplayInRect:tile.tileRect];
+
+                    // Overwrite the existing object in cache now that we have a real cost
+                    NSInteger cost = image.size.height * image.size.width * image.scale;
+                    [sself.tileCache setObject:tile forKey:[tileURL absoluteString] cost:cost];
+                }
+            };
+
+            if ([NSThread isMainThread]) {
+                block();
+            } else {
+                dispatch_sync(dispatch_get_main_queue(), block);
+            }
+        }];
+
+        [_operationsArray addObject:operation];
+    }
+
+}
+
+- (void)dealloc
+{
+    [self cancelConcurrentDownloads];
+    [_tileCache removeAllObjects];
+}
+
+- (void)cancelConcurrentDownloads
+{
+    for(id<SDWebImageOperation> operation in _operationsArray) {
+        if (operation) {
+            [operation cancel];
+        }
+    }
+    _operationsArray = nil;
 }
 
 @end

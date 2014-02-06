@@ -12,9 +12,14 @@
 - (CGSize)imageSizeForImageView:(NATiledImageView *)imageView;
 - (NSInteger)minimumImageZoomLevelForImageView:(NATiledImageView *)imageView;
 - (NSInteger)maximumImageZoomLevelForImageView:(NATiledImageView *)imageView;
+
+@optional
+- (NSURL *)tiledImageView:(NATiledImageView *)imageView urlForImageTileAtLevel:(NSInteger)level x:(NSInteger)x y:(NSInteger)y;
 @end
 
 @interface NATiledImageView : UIView
 - (id)initWithDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
 @property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
+
+- (void)cancelConcurrentDownloads;
 @end
