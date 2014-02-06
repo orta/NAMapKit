@@ -51,7 +51,7 @@
 
     if (!self) return nil;
 
-    self.backgroundColor = [UIColor blackColor];
+    self.backgroundColor = [UIColor clearColor];
     _dataSource = dataSource;
 
     CATiledLayer *layer = (id)[self layer];
@@ -73,7 +73,8 @@
 
 // http://openradar.appspot.com/8503490
 
-- (void)drawRect:(CGRect)rect {
+- (void)drawRect:(CGRect)rect
+{
     CGContextRef context = UIGraphicsGetCurrentContext();
 
     // get the scale from the context by getting the current transform matrix, then asking for
@@ -132,7 +133,7 @@
 //                [[UIColor redColor] set];
 //                CGContextSetLineWidth(context, 6.0);
 //                CGContextStrokeRect(context, tileRect);
-            } else {
+            } else if(tileImage) {
                 // Prioritise the async tile image above if one exists.
                 [tileImage drawInRect:tileRect blendMode:kCGBlendModeNormal alpha:1];
             }
@@ -146,11 +147,13 @@
 
 }
 
-+ (Class) layerClass {
++ (Class) layerClass
+{
     return [CATiledLayer class];
 }
 
-- (void)setContentScaleFactor:(CGFloat)contentScaleFactor {
+- (void)setContentScaleFactor:(CGFloat)contentScaleFactor
+{
     [super setContentScaleFactor:1.f];
 }
 
