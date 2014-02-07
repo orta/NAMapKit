@@ -15,10 +15,10 @@
 #define NA_CALLOUT_ANIMATION_DURATION 0.1f
 #define NA_ZOOM_STEP                  1.5f
 
-@interface NAMapView() <UIScrollViewDelegate>
+@interface NAMapView () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) NATiledImageView *imageView;
-@property (nonatomic, strong) NACallOutView  *calloutView;
+@property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
 @property (nonatomic, strong) NSMutableArray *annotationViews;
 
@@ -26,17 +26,22 @@
 
 @implementation NAMapView
 
-- (void)viewSetup {
+- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource
+{
+    self = [super initWithFrame:frame];
+    if (!self) return nil;
+
+    _dataSource = dataSource;
+    [self viewSetup];
+    [self setupGestures];
+
+    return self;
+}
+
+
+- (void)viewSetup
+{
     self.delegate = self;
-
-    UITapGestureRecognizer *doubleTap    = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
-	UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerTap:)];
-
-	[doubleTap setNumberOfTapsRequired:2];
-	[twoFingerTap setNumberOfTouchesRequired:2];
-
-	[self addGestureRecognizer:doubleTap];
-	[self addGestureRecognizer:twoFingerTap];
 
     self.imageView = [[NATiledImageView alloc] initWithDataSource:self.dataSource];
     [self addSubview:self.imageView];
@@ -49,48 +54,106 @@
     [self addSubview:self.calloutView];
 }
 
-- (void)awakeFromNib {
-    [super awakeFromNib];
-    [self viewSetup];
+
+- (void)setupGestures
+{
+    UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
+    UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerTap:)];
+
+    UIRotationGestureRecognizer *rotationGesture = [[UIRotationGestureRecognizer alloc] initWithTarget:self action:@selector(rotatePiece:)];
+    [self.imageView addGestureRecognizer:rotationGesture];
+    self.pinchGestureRecognizer.enabled = NO;
+
+    UIPinchGestureRecognizer *pinchGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(scalePiece:)];
+    [pinchGesture setDelegate:self];
+    [self.imageView addGestureRecognizer:pinchGesture];
+
+
+    [doubleTap setNumberOfTapsRequired:2];
+    [twoFingerTap setNumberOfTouchesRequired:2];
+
+    [self addGestureRecognizer:doubleTap];
+    [self addGestureRecognizer:twoFingerTap];
 }
 
-- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource {
-    self = [super initWithFrame:frame];
-    if (self) {
-        self.dataSource = dataSource;
-        [self viewSetup];
+
+- (void)rotatePiece:(UIRotationGestureRecognizer *)gestureRecognizer
+{
+    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
+
+    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
+        [gestureRecognizer view].transform = CGAffineTransformRotate([[gestureRecognizer view] transform], [gestureRecognizer rotation]);
+        [gestureRecognizer setRotation:0];
     }
-    return self;
 }
 
--(void)addAnimatedAnnontation:(NAAnnotation *)annontation {
+
+- (void)scalePiece:(UIPinchGestureRecognizer *)gestureRecognizer
+{
+    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
+
+    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
+        [gestureRecognizer view].transform = CGAffineTransformScale([[gestureRecognizer view] transform], [gestureRecognizer scale], [gestureRecognizer scale]);
+        [gestureRecognizer setScale:1];
+    }
+}
+
+
+- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    if (gestureRecognizer.view != otherGestureRecognizer.view) return NO;
+
+    if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]])
+        return NO;
+
+    return YES;
+}
+
+
+- (void)adjustAnchorPointForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
+{
+    if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
+        UIView *piece = gestureRecognizer.view;
+        CGPoint locationInView = [gestureRecognizer locationInView:piece];
+        CGPoint locationInSuperview = [gestureRecognizer locationInView:piece.superview];
+
+        piece.layer.anchorPoint = CGPointMake(locationInView.x / piece.bounds.size.width, locationInView.y / piece.bounds.size.height);
+        piece.center = locationInSuperview;
+    }
+}
+
+
+- (void)addAnimatedAnnontation:(NAAnnotation *)annontation
+{
     [self addAnnotation:annontation animated:YES];
 }
 
-- (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate {
+
+- (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate
+{
 
     NAPinAnnotationView *annontationView = [[NAPinAnnotationView alloc] initWithAnnotation:annotation onMapView:self];
 
     [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchDown];
     [self addObserver:annontationView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
 
-    if(animate){
+    if (animate) {
         annontationView.transform = CGAffineTransformTranslate(CGAffineTransformIdentity, 0.0f, -annontationView.center.y);
     }
 
     [self.annotationView addSubview:annontationView];
 
-    if(animate){
+    if (animate) {
         annontationView.animating = YES;
         [UIView animateWithDuration:NA_PIN_ANIMATION_DURATION animations:^{
             annontationView.transform = CGAffineTransformIdentity;
         }
-        completion:^ (BOOL finished) {
-            annontationView.animating = NO;
-        }];
+                         completion:^(BOOL finished) {
+                             annontationView.animating = NO;
+                         }];
     }
 
-    if(!self.annotationViews){
+    if (!self.annotationViews) {
         self.annotationViews = [[NSMutableArray alloc] init];
     }
 
@@ -98,22 +161,26 @@
     [self bringSubviewToFront:self.calloutView];
 }
 
-- (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate {
+
+- (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate
+{
     int i = 0;
-	for (NAAnnotation *annotation in annotations) {
-        if(animate){
+    for (NAAnnotation *annotation in annotations) {
+        if (animate) {
             [self performSelector:@selector(addAnimatedAnnontation:) withObject:annotation afterDelay:(NA_PIN_ANIMATION_DURATION * (i++ / 2.0f))];
         }
-        else{
+        else {
             [self addAnnotation:annotation animated:NO];
         }
 
-	}
+    }
 }
 
--(void)removeAnnotation:(NAAnnotation *)annotation{
+
+- (void)removeAnnotation:(NAAnnotation *)annotation
+{
     [self hideCallOut];
-    for(NAPinAnnotationView *annotationView in self.annotationViews){
+    for (NAPinAnnotationView *annotationView in self.annotationViews) {
         if (annotationView.annotation == annotation) {
             [annotationView removeFromSuperview];
             [self removeObserver:annotationView forKeyPath:@"contentSize"];
@@ -123,19 +190,23 @@
     }
 }
 
-- (IBAction)showCallOut:(id)sender {
-    if(![sender isKindOfClass:[NAPinAnnotationView class]]) return;
-    NAPinAnnotationView *annontationView = (NAPinAnnotationView *)sender;
+
+- (IBAction)showCallOut:(id)sender
+{
+    if (![sender isKindOfClass:[NAPinAnnotationView class]]) return;
+    NAPinAnnotationView *annontationView = (NAPinAnnotationView *) sender;
     [self _showCallOutForAnnontationView:annontationView animated:YES];
 }
 
-- (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated {
 
-    if (annontationView == nil) { return; }
+- (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated
+{
+
+    if (annontationView == nil) {return;}
 
     NAAnnotation *annotation = annontationView.annotation;
 
-    if(!annotation || !annotation.title) return;
+    if (!annotation || !annotation.title) return;
 
     [self hideCallOut];
 
@@ -146,7 +217,7 @@
     CGFloat animationDuration = animated ? NA_CALLOUT_ANIMATION_DURATION : 0.0f;
 
     self.calloutView.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.4f, 0.4f);
-    self.calloutView.hidden    = NO;
+    self.calloutView.hidden = NO;
 
     [UIView animateWithDuration:animationDuration animations:^{
         self.calloutView.transform = CGAffineTransformIdentity;
@@ -154,19 +225,25 @@
 
 }
 
-- (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate {
-	float x = (point.x * self.zoomScale) - (self.frame.size.width / 2.0f);
-	float y = (point.y * self.zoomScale) - (self.frame.size.height / 2.0f);
-	[self setContentOffset:CGPointMake(round(x), round(y)) animated:animate];
+
+- (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate
+{
+    CGFloat x = (point.x * self.zoomScale) - (self.frame.size.width / 2.0f);
+    CGFloat y = (point.y * self.zoomScale) - (self.frame.size.height / 2.0f);
+    [self setContentOffset:CGPointMake(roundf(x), roundf(y)) animated:animate];
 }
 
-- (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate {
+
+- (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate
+{
     [self hideCallOut];
     NAPinAnnotationView *selectedView = [self viewForAnnotation:annotation];
     [self _showCallOutForAnnontationView:selectedView animated:animate];
 }
 
-- (NAPinAnnotationView *)viewForAnnotation: (NAAnnotation *)annotation {
+
+- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
+{
     for (NAPinAnnotationView *annotationView in self.annotationViews) {
         if (annotationView.annotation == annotation) {
             return annotationView;
@@ -175,38 +252,47 @@
     return nil;
 }
 
-- (void)hideCallOut {
-	self.calloutView.hidden = YES;
+
+- (void)hideCallOut
+{
+    self.calloutView.hidden = YES;
 }
 
-- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event {
-	if (!self.dragging) {
-		[self hideCallOut];
-	}
 
-	[super touchesEnded:touches withEvent:event];
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    if (!self.dragging) {
+        [self hideCallOut];
+    }
+
+    [super touchesEnded:touches withEvent:event];
 }
 
--(CGPoint)zoomRelativePoint:(CGPoint)point {
+
+- (CGPoint)zoomRelativePoint:(CGPoint)point
+{
     CGSize originalSize = [self.imageView.dataSource imageSizeForImageView:self.imageView];
     CGFloat x = (self.contentSize.width / originalSize.width) * point.x;
     CGFloat y = (self.contentSize.height / originalSize.height) * point.y;
     return CGPointMake(round(x), round(y));
 }
 
-- (void)dealloc {
-    for(NAPinAnnotationView *annotationView in self.annotationViews){
+
+- (void)dealloc
+{
+    for (NAPinAnnotationView *annotationView in self.annotationViews) {
         [self removeObserver:annotationView forKeyPath:@"contentSize"];
     }
 
-    if(self.calloutView){
+    if (self.calloutView) {
         [self removeObserver:self.calloutView forKeyPath:@"contentSize"];
     }
 }
 
 #pragma mark - View Layout
 
-- (void)layoutSubviews {
+- (void)layoutSubviews
+{
     [super layoutSubviews];
     if (!self.imageView) return;
 
@@ -231,23 +317,35 @@
 
 #pragma mark - UIScrollViewDelegate
 
-- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView {
-	return self.imageView;
+- (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
+{
+    return self.imageView;
 }
 
 #pragma mark - Tap to Zoom
 
-- (void)handleDoubleTap:(UIGestureRecognizer *)gestureRecognizer {
-	// double tap zooms in, but returns to normal zoom level if it reaches max zoom
-	float newScale = self.zoomScale >= self.maximumZoomScale ? self.minimumZoomScale : self.zoomScale * NA_ZOOM_STEP;
-	[self setZoomScale:newScale animated:YES];
+- (void)handleDoubleTap:(UIGestureRecognizer *)gestureRecognizer
+{
+    // double tap zooms in, but returns to normal zoom level if it reaches max zoom
+    float newScale = self.zoomScale >= self.maximumZoomScale ? self.minimumZoomScale : self.zoomScale * NA_ZOOM_STEP;
+    [self setZoomScale:newScale animated:YES];
 }
 
-- (void)handleTwoFingerTap:(UIGestureRecognizer *)gestureRecognizer {
-	// two-finger tap zooms out, but returns to normal zoom level if it reaches min zoom
-	float newScale = self.zoomScale <= self.minimumZoomScale ? self.maximumZoomScale : self.zoomScale / NA_ZOOM_STEP;
-	[self setZoomScale:newScale animated:YES];
+
+- (void)handleTwoFingerTap:(UIGestureRecognizer *)gestureRecognizer
+{
+    // two-finger tap zooms out, but returns to normal zoom level if it reaches min zoom
+    float newScale = self.zoomScale <= self.minimumZoomScale ? self.maximumZoomScale : self.zoomScale / NA_ZOOM_STEP;
+    [self setZoomScale:newScale animated:YES];
 }
+
+
+- (void)handleRotation:(UIRotationGestureRecognizer *)recognizer
+{
+    recognizer.view.transform = CGAffineTransformRotate(recognizer.view.transform, recognizer.rotation);
+    recognizer.rotation = 0;
+}
+
 
 @end
 
