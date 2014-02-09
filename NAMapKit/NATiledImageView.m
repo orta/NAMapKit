@@ -7,6 +7,7 @@
 //
 
 #import "NATiledImageView.h"
+#import "NAAnnotation.h"
 #import <QuartzCore/CATiledLayer.h>
 #import <SDWebImage/UIImageView+WebCache.h>
 

@@ -15,7 +15,7 @@ Pod::Spec.new do |s|
   s.platform     = :ios, '5.0'
 
   s.source_files = "NaMapKit/*.{h,m}"
-  s.resources = "NAMapKit/*.png"
+
   s.frameworks   = 'Foundation', 'UIKit', 'CoreGraphics'
   s.requires_arc = true
 end

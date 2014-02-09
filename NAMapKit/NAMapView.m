@@ -1,4 +1,4 @@
-//
+ //
 // NAMapView.h
 // NAMapKit
 //
@@ -21,17 +21,20 @@
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
 @property (nonatomic, strong) NSMutableArray *annotationViews;
+@property (nonatomic, assign) CGFloat lastRotation;
 
 @end
 
 @implementation NAMapView
 
-- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource
+- (id)initWithFrame:(CGRect)frame tiledImageDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource delegate:(NSObject <NAMapViewDelegate> *)delegate
 {
     self = [super initWithFrame:frame];
     if (!self) return nil;
 
     _dataSource = dataSource;
+    _mapDelegate = delegate;
+
     [self viewSetup];
     [self setupGestures];
 
@@ -60,14 +63,12 @@
     UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
     UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerTap:)];
 
+    [self removeGestureRecognizer:self.pinchGestureRecognizer];
+//    self.pinchGestureRecognizer.enabled = NO;
+
     UIRotationGestureRecognizer *rotationGesture = [[UIRotationGestureRecognizer alloc] initWithTarget:self action:@selector(rotatePiece:)];
-    [self.imageView addGestureRecognizer:rotationGesture];
-    self.pinchGestureRecognizer.enabled = NO;
-
-    UIPinchGestureRecognizer *pinchGesture = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(scalePiece:)];
-    [pinchGesture setDelegate:self];
-    [self.imageView addGestureRecognizer:pinchGesture];
-
+    [self addGestureRecognizer:rotationGesture];
+    rotationGesture.delegate = self;
 
     [doubleTap setNumberOfTapsRequired:2];
     [twoFingerTap setNumberOfTouchesRequired:2];
@@ -79,32 +80,34 @@
 
 - (void)rotatePiece:(UIRotationGestureRecognizer *)gestureRecognizer
 {
-    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
+//    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
+//    UIView *targetView = self.imageView;
+//
+//    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
+//        CGFloat rotation = 0 - self.lastRotation - [gestureRecognizer rotation];
+//        CGAffineTransform currentTransform = targetView.transform;
+//        CGAffineTransform newTransform = CGAffineTransformRotate(currentTransform, rotation);
+//        [targetView setTransform:newTransform];
+//        self.lastRotation = [gestureRecognizer rotation];
+//
+////        self.imageView.transform = CGAffineTransformRotate([self.imageView transform], [gestureRecognizer rotation]);
+////        self.annotationView.transform = CGAffineTransformRotate([self.annotationView transform], [gestureRecognizer rotation]);
+////        [gestureRecognizer setRotation:0];
+//    }
 
-    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
-        [gestureRecognizer view].transform = CGAffineTransformRotate([[gestureRecognizer view] transform], [gestureRecognizer rotation]);
-        [gestureRecognizer setRotation:0];
-    }
+    CGFloat rotation = gestureRecognizer.rotation;
+
+    CGAffineTransform transform = CGAffineTransformRotate(self.imageView.transform, rotation);
+    self.imageView.transform = transform;
+    gestureRecognizer.rotation = 0.0f;
 }
-
-
-- (void)scalePiece:(UIPinchGestureRecognizer *)gestureRecognizer
-{
-    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
-
-    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
-        [gestureRecognizer view].transform = CGAffineTransformScale([[gestureRecognizer view] transform], [gestureRecognizer scale], [gestureRecognizer scale]);
-        [gestureRecognizer setScale:1];
-    }
-}
-
 
 - (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
 {
-    if (gestureRecognizer.view != otherGestureRecognizer.view) return NO;
-
-    if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]])
-        return NO;
+//    if (gestureRecognizer.view != otherGestureRecognizer.view) return NO;
+//
+//    if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]])
+//        return NO;
 
     return YES;
 }
@@ -131,10 +134,11 @@
 
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate
 {
+    NAPinAnnotationView *annontationView = [self.mapDelegate mapView:self viewForAnnotation:annotation];
+    annontationView.mapView = self;
+    annontationView.annotation = annotation;
+    [annontationView updatePosition];
 
-    NAPinAnnotationView *annontationView = [[NAPinAnnotationView alloc] initWithAnnotation:annotation onMapView:self];
-
-    [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchDown];
     [self addObserver:annontationView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
 
     if (animate) {
@@ -144,13 +148,13 @@
     [self.annotationView addSubview:annontationView];
 
     if (animate) {
-        annontationView.animating = YES;
-        [UIView animateWithDuration:NA_PIN_ANIMATION_DURATION animations:^{
-            annontationView.transform = CGAffineTransformIdentity;
-        }
-                         completion:^(BOOL finished) {
-                             annontationView.animating = NO;
-                         }];
+//        annontationView.animating = YES;
+//        [UIView animateWithDuration:NA_PIN_ANIMATION_DURATION animations:^{
+//            annontationView.transform = CGAffineTransformIdentity;
+//        }
+//                         completion:^(BOOL finished) {
+//                             annontationView.animating = NO;
+//                         }];
     }
 
     if (!self.annotationViews) {
@@ -172,7 +176,6 @@
         else {
             [self addAnnotation:annotation animated:NO];
         }
-
     }
 }
 
@@ -190,7 +193,6 @@
     }
 }
 
-
 - (IBAction)showCallOut:(id)sender
 {
     if (![sender isKindOfClass:[NAPinAnnotationView class]]) return;
@@ -206,7 +208,7 @@
 
     NAAnnotation *annotation = annontationView.annotation;
 
-    if (!annotation || !annotation.title) return;
+//    if (!annotation || !annotation.title) return;
 
     [self hideCallOut];
 

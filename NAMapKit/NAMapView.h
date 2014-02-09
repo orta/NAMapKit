@@ -1,22 +1,30 @@
 //
-// NAAnnotation.h
+// NAMapView.h
 // NAMapKit
 //
 // Created by Neil Ang on 21/07/10.
+// Updated by Orta Therox on 05/01/14.
 // Copyright 2010 neilang.com. All rights reserved.
 //
 
 #import <UIKit/UIKit.h>
 #import "NAAnnotation.h"
 
+@class NAMapView, NAPinAnnotationView;
+
+@protocol NAMapViewDelegate
+- (NAPinAnnotationView *)mapView:(NAMapView *)imageView viewForAnnotation:(NAAnnotation *)annotation;
+- (void)mapView:(NAMapView *)imageView tappedOnAnnotation:(NAAnnotation *)annotation;
+@end
+
 @protocol NATiledImageViewDataSource;
 
 @interface NAMapView : UIScrollView
 
-- (id)initWithFrame:(CGRect)frame dataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
-@property (nonatomic, strong) NSObject <NATiledImageViewDataSource> *dataSource;
+- (id)initWithFrame:(CGRect)frame tiledImageDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource delegate:(NSObject <NAMapViewDelegate> *)delegate;
 
-- (void)displayMap:(UIImage *)map;
+@property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
+@property (nonatomic, weak) NSObject <NAMapViewDelegate> *mapDelegate;
 
 - (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;

@@ -12,9 +12,9 @@
 
 @interface NAPinAnnotationView : UIButton
 
-- (id)initWithAnnotation:(NAAnnotation *)annotation onMapView:(NAMapView *)mapView;
+@property (nonatomic, assign) BOOL animating;
+@property (nonatomic, strong) NAAnnotation *annotation;
+@property (nonatomic, weak) NAMapView *mapView;
 
-@property (nonatomic, retain) NAAnnotation *annotation;
-@property (nonatomic, assign) BOOL          animating;
-
+-(void)updatePosition;
 @end

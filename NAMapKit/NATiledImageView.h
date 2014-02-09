@@ -4,7 +4,7 @@
 //
 //  Copyright (c) 2014 http://artsy.net. All rights reserved.
 
-@class NATiledImageView;
+@class NATiledImageView, NAAnnotation;
 
 @protocol NATiledImageViewDataSource
 - (UIImage *)tiledImageView:(NATiledImageView *)imageView imageTileForLevel:(NSInteger)level x:(NSInteger)x y:(NSInteger)y;

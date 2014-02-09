@@ -10,25 +10,19 @@
 
 @implementation NAAnnotation
 
-@synthesize point    = _point;
-@synthesize color    = _color;
-@synthesize title    = _title;
-@synthesize subtitle = _subtitle;
-@synthesize rightCalloutAccessoryView = _rightCalloutAccessoryView;
-
-+ (id)annotationWithPoint:(CGPoint)point{
-    return [[[self class] alloc] initWithPoint:point];
++ (id)annotationWithPoint:(CGPoint)point representedObject:(id)representedObject
+{
+    return [[[self class] alloc] initWithPoint:point representedObject:representedObject];
 }
 
-- (id)initWithPoint:(CGPoint)point{
+- (id)initWithPoint:(CGPoint)point representedObject:(id)representedObject
+{
     self = [super init];
-    if (self) {
-        self.point    = point;
-        self.color    = NAPinColorRed;
-        self.title    = nil;
-        self.subtitle = nil;
-        self.rightCalloutAccessoryView = nil;
-    }
+    if (!self) return nil;
+
+    _point = point;
+    _representedObject = representedObject;
+
     return self;
 }
 
