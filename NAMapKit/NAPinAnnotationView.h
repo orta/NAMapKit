@@ -16,5 +16,7 @@
 @property (nonatomic, strong) NAAnnotation *annotation;
 @property (nonatomic, weak) NAMapView *mapView;
 
+@property (nonatomic, assign) CGPoint mapPositioningPoint;
+
 -(void)updatePosition;
 @end

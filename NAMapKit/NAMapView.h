@@ -26,6 +26,8 @@
 @property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
 @property (nonatomic, weak) NSObject <NAMapViewDelegate> *mapDelegate;
 
+@property (nonatomic, strong) NSURL *backingImageURL;
+
 - (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate;

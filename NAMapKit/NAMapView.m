@@ -10,18 +10,21 @@
 #import "NAPinAnnotationView.h"
 #import "NACallOutView.h"
 #import "NATiledImageView.h"
+#import "UIImageView+WebCache.h"
 
 #define NA_PIN_ANIMATION_DURATION     0.5f
 #define NA_CALLOUT_ANIMATION_DURATION 0.1f
 #define NA_ZOOM_STEP                  1.5f
 
+static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
+
 @interface NAMapView () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 
 @property (nonatomic, strong) NATiledImageView *imageView;
+@property (nonatomic, strong) UIImageView *backingView;
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
 @property (nonatomic, strong) NSMutableArray *annotationViews;
-@property (nonatomic, assign) CGFloat lastRotation;
 
 @end
 
@@ -54,9 +57,9 @@
 
     self.calloutView = [[NACallOutView alloc] initOnMapView:self];
     [self addObserver:self.calloutView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
+
     [self addSubview:self.calloutView];
 }
-
 
 - (void)setupGestures
 {
@@ -66,9 +69,6 @@
     [self removeGestureRecognizer:self.pinchGestureRecognizer];
 //    self.pinchGestureRecognizer.enabled = NO;
 
-    UIRotationGestureRecognizer *rotationGesture = [[UIRotationGestureRecognizer alloc] initWithTarget:self action:@selector(rotatePiece:)];
-    [self addGestureRecognizer:rotationGesture];
-    rotationGesture.delegate = self;
 
     [doubleTap setNumberOfTapsRequired:2];
     [twoFingerTap setNumberOfTouchesRequired:2];
@@ -77,53 +77,6 @@
     [self addGestureRecognizer:twoFingerTap];
 }
 
-
-- (void)rotatePiece:(UIRotationGestureRecognizer *)gestureRecognizer
-{
-//    [self adjustAnchorPointForGestureRecognizer:gestureRecognizer];
-//    UIView *targetView = self.imageView;
-//
-//    if ([gestureRecognizer state] == UIGestureRecognizerStateBegan || [gestureRecognizer state] == UIGestureRecognizerStateChanged) {
-//        CGFloat rotation = 0 - self.lastRotation - [gestureRecognizer rotation];
-//        CGAffineTransform currentTransform = targetView.transform;
-//        CGAffineTransform newTransform = CGAffineTransformRotate(currentTransform, rotation);
-//        [targetView setTransform:newTransform];
-//        self.lastRotation = [gestureRecognizer rotation];
-//
-////        self.imageView.transform = CGAffineTransformRotate([self.imageView transform], [gestureRecognizer rotation]);
-////        self.annotationView.transform = CGAffineTransformRotate([self.annotationView transform], [gestureRecognizer rotation]);
-////        [gestureRecognizer setRotation:0];
-//    }
-
-    CGFloat rotation = gestureRecognizer.rotation;
-
-    CGAffineTransform transform = CGAffineTransformRotate(self.imageView.transform, rotation);
-    self.imageView.transform = transform;
-    gestureRecognizer.rotation = 0.0f;
-}
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
-{
-//    if (gestureRecognizer.view != otherGestureRecognizer.view) return NO;
-//
-//    if ([gestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]] || [otherGestureRecognizer isKindOfClass:[UILongPressGestureRecognizer class]])
-//        return NO;
-
-    return YES;
-}
-
-
-- (void)adjustAnchorPointForGestureRecognizer:(UIGestureRecognizer *)gestureRecognizer
-{
-    if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
-        UIView *piece = gestureRecognizer.view;
-        CGPoint locationInView = [gestureRecognizer locationInView:piece];
-        CGPoint locationInSuperview = [gestureRecognizer locationInView:piece.superview];
-
-        piece.layer.anchorPoint = CGPointMake(locationInView.x / piece.bounds.size.width, locationInView.y / piece.bounds.size.height);
-        piece.center = locationInSuperview;
-    }
-}
 
 
 - (void)addAnimatedAnnontation:(NAAnnotation *)annontation
@@ -271,6 +224,18 @@
 }
 
 
+- (void)setBackingImageURL:(NSURL *)backingImageURL
+{
+    if(!self.backingView){
+        UIImageView *backingView = [[UIImageView alloc] initWithFrame:self.imageView.frame];
+        [self insertSubview:backingView belowSubview:self.imageView];
+        self.backingView = backingView;
+    }
+
+    _backingImageURL = backingImageURL;
+    [self.backingView setImageWithURL:backingImageURL];
+}
+
 - (CGPoint)zoomRelativePoint:(CGPoint)point
 {
     CGSize originalSize = [self.imageView.dataSource imageSizeForImageView:self.imageView];
@@ -313,8 +278,12 @@
     else
         imageFrame.origin.y = 0;
 
-    self.imageView.frame = imageFrame;
+
     self.annotationView.frame = imageFrame;
+    self.imageView.frame = imageFrame;
+    self.backingView.frame = imageFrame;
+
+//    [self.annotationViews makeObjectsPerformSelector:@selector(updatePosition)];
 }
 
 #pragma mark - UIScrollViewDelegate
@@ -328,9 +297,16 @@
 
 - (void)handleDoubleTap:(UIGestureRecognizer *)gestureRecognizer
 {
-    // double tap zooms in, but returns to normal zoom level if it reaches max zoom
-    float newScale = self.zoomScale >= self.maximumZoomScale ? self.minimumZoomScale : self.zoomScale * NA_ZOOM_STEP;
-    [self setZoomScale:newScale animated:YES];
+    if (self.zoomScale == self.maximumZoomScale) {
+        [self setZoomScale:self.minimumZoomScale animated:YES];
+
+    } else{
+
+        CGPoint tapCenter = [gestureRecognizer locationInView:self.imageView];
+        CGFloat newScale = MIN(self.zoomScale * NAZoomMultiplierForDoubleTap, self.maximumZoomScale);
+        CGRect maxZoomRect = [self rectAroundPoint:tapCenter atZoomScale:newScale];
+        [self zoomToRect:maxZoomRect animated:YES];
+    }
 }
 
 
@@ -342,12 +318,22 @@
 }
 
 
-- (void)handleRotation:(UIRotationGestureRecognizer *)recognizer
-{
-    recognizer.view.transform = CGAffineTransformRotate(recognizer.view.transform, recognizer.rotation);
-    recognizer.rotation = 0;
-}
+ - (CGRect)rectAroundPoint:(CGPoint)point atZoomScale:(CGFloat)zoomScale {
 
+     // Define the shape of the zoom rect.
+     CGSize boundsSize = self.bounds.size;
+
+     // Modify the size according to the requested zoom level.
+     // For example, if we're zooming in to 0.5 zoom, then this will increase the bounds size
+     // by a factor of two.
+
+     CGSize scaledBoundsSize = CGSizeMake(boundsSize.width / zoomScale, boundsSize.height / zoomScale);
+
+     return CGRectMake(point.x - scaledBoundsSize.width / 2,
+             point.y - scaledBoundsSize.height / 2,
+             scaledBoundsSize.width,
+             scaledBoundsSize.height);
+ }
 
 @end
 
