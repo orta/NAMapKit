@@ -207,10 +207,10 @@
 #pragma - Private helpers
 
 -(void)updatePosition {
-    CGPoint point = [self.mapView zoomRelativePoint:self.position];
-    float xPos = point.x - (self.frame.size.width / 2.0f);
-    float yPos = point.y - (self.frame.size.height) - NA_ANCHOR_Y_OFFSET;
-    self.frame = CGRectMake(floor(xPos), yPos, self.frame.size.width, self.frame.size.height);
+//    CGPoint point = [self.mapView zoomRelativePoint:self.position];
+//    float xPos = point.x - (self.frame.size.width / 2.0f);
+//    float yPos = point.y - (self.frame.size.height) - NA_ANCHOR_Y_OFFSET;
+//    self.frame = CGRectMake(floor(xPos), yPos, self.frame.size.width, self.frame.size.height);
 }
 
 -(void)positionView:(UIView *)view posX:(float)x width:(float)width{

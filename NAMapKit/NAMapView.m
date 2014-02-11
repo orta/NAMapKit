@@ -66,10 +66,6 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTap:)];
     UITapGestureRecognizer *twoFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerTap:)];
 
-    [self removeGestureRecognizer:self.pinchGestureRecognizer];
-//    self.pinchGestureRecognizer.enabled = NO;
-
-
     [doubleTap setNumberOfTapsRequired:2];
     [twoFingerTap setNumberOfTouchesRequired:2];
 
@@ -257,34 +253,34 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 }
 
 #pragma mark - View Layout
-
-- (void)layoutSubviews
-{
-    [super layoutSubviews];
-    if (!self.imageView) return;
-
-    CGSize boundsSize = self.bounds.size;
-    CGRect imageFrame = self.imageView.frame;
-
-    // Center horizontally
-    if (imageFrame.size.width < boundsSize.width)
-        imageFrame.origin.x = (boundsSize.width - imageFrame.size.width) / 2;
-    else
-        imageFrame.origin.x = 0;
-
-    // Center vertically
-    if (imageFrame.size.height < boundsSize.height)
-        imageFrame.origin.y = (boundsSize.height - imageFrame.size.height) / 2;
-    else
-        imageFrame.origin.y = 0;
-
-
-    self.annotationView.frame = imageFrame;
-    self.imageView.frame = imageFrame;
-    self.backingView.frame = imageFrame;
-
-//    [self.annotationViews makeObjectsPerformSelector:@selector(updatePosition)];
-}
+//
+//- (void)layoutSubviews
+//{
+//    [super layoutSubviews];
+//    if (!self.imageView) return;
+//
+//    CGSize boundsSize = self.bounds.size;
+//    CGRect imageFrame = self.imageView.frame;
+//
+//    // Center horizontally
+//    if (imageFrame.size.width < boundsSize.width)
+//        imageFrame.origin.x = (boundsSize.width - imageFrame.size.width) / 2;
+//    else
+//        imageFrame.origin.x = 0;
+//
+//    // Center vertically
+//    if (imageFrame.size.height < boundsSize.height)
+//        imageFrame.origin.y = (boundsSize.height - imageFrame.size.height) / 2;
+//    else
+//        imageFrame.origin.y = 0;
+//
+//
+//    self.annotationView.frame = imageFrame;
+//    self.imageView.frame = imageFrame;
+//    self.backingView.frame = imageFrame;
+//
+////    [self.annotationViews makeObjectsPerformSelector:@selector(updatePosition)];
+//}
 
 #pragma mark - UIScrollViewDelegate
 
