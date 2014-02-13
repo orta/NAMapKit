@@ -18,8 +18,11 @@
 @end
 
 @interface NATiledImageView : UIView
+
 - (id)initWithDataSource:(NSObject <NATiledImageViewDataSource> *)dataSource;
+
 @property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
+@property (readonly, nonatomic, assign) NSInteger currentZoomLevel;
 
 - (void)cancelConcurrentDownloads;
 @end

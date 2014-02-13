@@ -26,6 +26,7 @@
 @end
 
 @implementation NATile : NSObject
+
 - (instancetype)initWithImage:(UIImage *)anImage rect:(CGRect)rect
 {
     self = [super init];
@@ -40,6 +41,7 @@
 
 @interface NATiledImageView()
 @property (nonatomic, assign) NSInteger maxLevelOfDetail;
+@property (nonatomic, assign) NSInteger currentZoomLevel;
 @property (atomic, strong) NSCache *tileCache;
 @property (atomic, strong) NSMutableArray *operationsArray;
 @end

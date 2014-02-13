@@ -73,7 +73,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     [self addGestureRecognizer:twoFingerTap];
 }
 
-
+#pragma mark Annotations
 
 - (void)addAnimatedAnnontation:(NAAnnotation *)annontation
 {
@@ -128,12 +128,29 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     }
 }
 
+- (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate
+{
+     [self hideCallOut];
+     NAPinAnnotationView *selectedView = [self viewForAnnotation:annotation];
+     [self _showCallOutForAnnontationView:selectedView animated:animate];
+}
+
+
+- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
+{
+     for (NAPinAnnotationView *annotationView in self.annotationViews) {
+         if (annotationView.annotation == annotation) {
+             return annotationView;
+         }
+     }
+     return nil;
+}
 
 - (void)removeAnnotation:(NAAnnotation *)annotation
 {
     [self hideCallOut];
     for (NAPinAnnotationView *annotationView in self.annotationViews) {
-        if (annotationView.annotation == annotation) {
+        if ([annotationView respondsToSelector:@selector(annotation)] && annotationView.annotation == annotation) {
             [annotationView removeFromSuperview];
             [self removeObserver:annotationView forKeyPath:@"contentSize"];
             [self.annotationViews removeObject:annotationView];
@@ -142,6 +159,16 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     }
 }
 
+
+- (void)removeAnnotations:(NSArray *)annotations
+{
+    for(NAAnnotation *annotation in annotations){
+        [self removeAnnotation:annotation];
+    }
+}
+
+ #pragma mark Callouts
+
 - (IBAction)showCallOut:(id)sender
 {
     if (![sender isKindOfClass:[NAPinAnnotationView class]]) return;
@@ -149,6 +176,11 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     [self _showCallOutForAnnontationView:annontationView animated:YES];
 }
 
+- (void)scrollViewDidZoom:(UIScrollView *)scrollView
+{
+    CGFloat zoomLevel = self.zoomScale / self.maximumZoomScale;
+    [self.mapDelegate mapView:self hasChangedZoomLevel:zoomLevel];
+}
 
 - (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated
 {
@@ -165,9 +197,9 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
     [self centreOnPoint:annotation.point animated:animated];
 
-    CGFloat animationDuration = animated ? NA_CALLOUT_ANIMATION_DURATION : 0.0f;
+    CGFloat animationDuration = animated ? NA_CALLOUT_ANIMATION_DURATION : 0;
 
-    self.calloutView.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.4f, 0.4f);
+    self.calloutView.transform = CGAffineTransformScale(CGAffineTransformIdentity, 0.4, 0.4);
     self.calloutView.hidden = NO;
 
     [UIView animateWithDuration:animationDuration animations:^{
@@ -185,29 +217,11 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 }
 
 
-- (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate
-{
-    [self hideCallOut];
-    NAPinAnnotationView *selectedView = [self viewForAnnotation:annotation];
-    [self _showCallOutForAnnontationView:selectedView animated:animate];
-}
-
-
-- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
-{
-    for (NAPinAnnotationView *annotationView in self.annotationViews) {
-        if (annotationView.annotation == annotation) {
-            return annotationView;
-        }
-    }
-    return nil;
-}
-
-
 - (void)hideCallOut
 {
-    self.calloutView.hidden = YES;
+     self.calloutView.hidden = YES;
 }
+
 
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
@@ -218,6 +232,8 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
     [super touchesEnded:touches withEvent:event];
 }
+
+#pragma mark Property Overrides
 
 
 - (void)setBackingImageURL:(NSURL *)backingImageURL
@@ -252,35 +268,13 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     }
 }
 
-#pragma mark - View Layout
-//
-//- (void)layoutSubviews
-//{
-//    [super layoutSubviews];
-//    if (!self.imageView) return;
-//
-//    CGSize boundsSize = self.bounds.size;
-//    CGRect imageFrame = self.imageView.frame;
-//
-//    // Center horizontally
-//    if (imageFrame.size.width < boundsSize.width)
-//        imageFrame.origin.x = (boundsSize.width - imageFrame.size.width) / 2;
-//    else
-//        imageFrame.origin.x = 0;
-//
-//    // Center vertically
-//    if (imageFrame.size.height < boundsSize.height)
-//        imageFrame.origin.y = (boundsSize.height - imageFrame.size.height) / 2;
-//    else
-//        imageFrame.origin.y = 0;
-//
-//
-//    self.annotationView.frame = imageFrame;
-//    self.imageView.frame = imageFrame;
-//    self.backingView.frame = imageFrame;
-//
-////    [self.annotationViews makeObjectsPerformSelector:@selector(updatePosition)];
-//}
+
+#pragma mark - NSTiledImageViewDelegate
+
+ - (void)tiledImageViewDidChangeZoomLevel:(NATiledImageView *)imageView
+ {
+     NSLog(@"Changed zoom level %i", imageView.currentZoomLevel);
+ }
 
 #pragma mark - UIScrollViewDelegate
 

@@ -14,7 +14,10 @@
 
 @protocol NAMapViewDelegate
 - (NAPinAnnotationView *)mapView:(NAMapView *)imageView viewForAnnotation:(NAAnnotation *)annotation;
+
+@optional
 - (void)mapView:(NAMapView *)imageView tappedOnAnnotation:(NAAnnotation *)annotation;
+- (void)mapView:(NAMapView *)imageView hasChangedZoomLevel:(CGFloat)level;
 @end
 
 @protocol NATiledImageViewDataSource;
@@ -32,6 +35,7 @@
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate;
 - (void)removeAnnotation:(NAAnnotation *)annotation;
+- (void)removeAnnotations:(NSArray *)annotations;
 
 - (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate;
 - (CGPoint)zoomRelativePoint:(CGPoint)point;
