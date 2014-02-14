@@ -16,7 +16,7 @@
 - (NAPinAnnotationView *)mapView:(NAMapView *)imageView viewForAnnotation:(NAAnnotation *)annotation;
 
 @optional
-- (void)mapView:(NAMapView *)imageView tappedOnAnnotation:(NAAnnotation *)annotation;
+- (void)mapView:(NAMapView *)imageView tappedOnView:(NAPinAnnotationView *)annotation;
 - (void)mapView:(NAMapView *)imageView hasChangedZoomLevel:(CGFloat)level;
 @end
 

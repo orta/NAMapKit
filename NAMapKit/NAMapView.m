@@ -87,6 +87,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     annontationView.mapView = self;
     annontationView.annotation = annotation;
     [annontationView updatePosition];
+    [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchDown];
 
     [self addObserver:annontationView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
 
@@ -169,9 +170,11 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
  #pragma mark Callouts
 
-- (IBAction)showCallOut:(id)sender
+- (IBAction)showCallOut:(NAPinAnnotationView *)sender
 {
+    [self.mapDelegate mapView:self tappedOnView:sender];
     if (![sender isKindOfClass:[NAPinAnnotationView class]]) return;
+
     NAPinAnnotationView *annontationView = (NAPinAnnotationView *) sender;
     [self _showCallOutForAnnontationView:annontationView animated:YES];
 }
