@@ -133,18 +133,17 @@
                 [tile.tileImage drawInRect:tile.tileRect blendMode:kCGBlendModeNormal alpha:1];
 //
 //// Uncomment to see the tiles
-                [[UIColor redColor] set];
-                CGContextSetLineWidth(context, 6.0);
-                CGContextStrokeRect(context, tileRect);
+//                [[UIColor redColor] set];
+//                CGContextSetLineWidth(context, 6.0);
+//                CGContextStrokeRect(context, tileRect);
             } else if (tileImage) {
                 // Prioritise the async tile image above if one exists.
 
                 [tileImage drawInRect:tileRect blendMode:kCGBlendModeNormal alpha:1];
 
-                [[UIColor greenColor] set];
-                CGContextSetLineWidth(context, 6.0);
-                CGContextStrokeRect(context, tileRect);
-
+//                [[UIColor greenColor] set];
+//                CGContextSetLineWidth(context, 6.0);
+//                CGContextStrokeRect(context, tileRect);
             }
         }
     }
