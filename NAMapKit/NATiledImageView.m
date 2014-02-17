@@ -131,14 +131,20 @@
 
             if (tile.tileImage) {
                 [tile.tileImage drawInRect:tile.tileRect blendMode:kCGBlendModeNormal alpha:1];
-
-// Uncomment to see the tiles
-//                [[UIColor redColor] set];
-//                CGContextSetLineWidth(context, 6.0);
-//                CGContextStrokeRect(context, tileRect);
-            } else if(tileImage) {
+//
+//// Uncomment to see the tiles
+                [[UIColor redColor] set];
+                CGContextSetLineWidth(context, 6.0);
+                CGContextStrokeRect(context, tileRect);
+            } else if (tileImage) {
                 // Prioritise the async tile image above if one exists.
+
                 [tileImage drawInRect:tileRect blendMode:kCGBlendModeNormal alpha:1];
+
+                [[UIColor greenColor] set];
+                CGContextSetLineWidth(context, 6.0);
+                CGContextStrokeRect(context, tileRect);
+
             }
         }
     }
@@ -169,7 +175,7 @@
 
         id<SDWebImageOperation> operation = nil;
         operation = [SDWebImageManager.sharedManager downloadWithURL:tileURL options:0 progress:nil completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished) {
-
+            if(error) NSLog(@"NATiledImageView: Error downloading tile at URL %@ - %@", tileURL, error.localizedDescription);
             if (!wself || !finished || error) return;
 
             void (^block)(void) = ^{
@@ -186,6 +192,10 @@
                     // Overwrite the existing object in cache now that we have a real cost
                     NSInteger cost = image.size.height * image.size.width * image.scale;
                     [sself.tileCache setObject:tile forKey:[tileURL absoluteString] cost:cost];
+
+                    if([sself.dataSource respondsToSelector:@selector(tiledImageView:didDownloadedTiledImage:atURL:)]){
+                        [sself.dataSource tiledImageView:self didDownloadedTiledImage:image atURL:tileURL];
+                    }
                 }
             };
 

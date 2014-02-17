@@ -15,6 +15,7 @@
 
 @optional
 - (NSURL *)tiledImageView:(NATiledImageView *)imageView urlForImageTileAtLevel:(NSInteger)level x:(NSInteger)x y:(NSInteger)y;
+- (void)tiledImageView:(NATiledImageView *)imageView didDownloadedTiledImage:(UIImage *)image atURL:(NSURL *)url;
 @end
 
 @interface NATiledImageView : UIView
