@@ -36,6 +36,7 @@
 - (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate;
 - (void)removeAnnotation:(NAAnnotation *)annotation;
 - (void)removeAnnotations:(NSArray *)annotations;
+- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation;
 
 - (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate;
 - (CGPoint)zoomRelativePoint:(CGPoint)point;
