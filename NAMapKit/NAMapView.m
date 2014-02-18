@@ -24,8 +24,6 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 @property (nonatomic, strong) UIImageView *backingView;
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
-@property (nonatomic, strong) NSMutableDictionary *annotationViews;
-
 @end
 
 @implementation NAMapView
@@ -37,7 +35,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
     _dataSource = dataSource;
     _mapDelegate = delegate;
-    _annotationViews = [NSMutableDictionary dictionary];
+    _annotationViews = [NSMapTable strongToStrongObjectsMapTable];
 
     [self viewSetup];
     [self setupGestures];
@@ -138,11 +136,15 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
 - (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
 {
-     for(NAAnnotation *annotation in self.annotationViews.allKeys){
-         if([[annotation representedObject] isEqual:annotation.representedObject]) {
-             return self.annotationViews[annotation];
-         }
-     }
+    // TODO: should be able to fetch annoting without iterating through the whole thing
+    //       return [self.annotationViews objectForKey:annotation];
+
+    for(NAAnnotation *existingAnnotation in self.annotationViews.keyEnumerator) {
+        if (CGPointEqualToPoint(existingAnnotation.point, annotation.point) && [existingAnnotation.representedObject isEqual:annotation.representedObject]) {
+            return [self.annotationViews objectForKey:existingAnnotation];
+        }
+    }
+    
     return nil;
 }
 
