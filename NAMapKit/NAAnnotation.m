@@ -26,5 +26,17 @@
     return self;
 }
 
+-(id)copyWithZone: (NSZone *)zone
+{
+    return [[NAAnnotation allocWithZone:zone] initWithPoint:self.point representedObject:self.representedObject];
+}
+
+- (BOOL)isEqual:(id)object
+{
+    if([object isKindOfClass:self.class]){
+        return CGPointEqualToPoint(self.point , [object point]) && [self.representedObject isEqual:[object representedObject]];
+    }
+    return [super isEqual:object];
+}
 
 @end

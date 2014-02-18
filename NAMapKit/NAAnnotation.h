@@ -6,9 +6,9 @@
 // Copyright 2010 neilang.com. All rights reserved.
 //
 
-@interface NAAnnotation : NSObject
+@interface NAAnnotation : NSObject <NSCopying>
 
-@property (nonatomic, assign) CGPoint     point;
+@property (nonatomic, assign) CGPoint point;
 @property (nonatomic, strong) id representedObject;
 
 + (id)annotationWithPoint:(CGPoint)point representedObject:(id)representedObject;

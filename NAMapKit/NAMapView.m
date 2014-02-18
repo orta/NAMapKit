@@ -24,7 +24,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 @property (nonatomic, strong) UIImageView *backingView;
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
-@property (nonatomic, strong) NSMutableArray *annotationViews;
+@property (nonatomic, strong) NSMutableDictionary *annotationViews;
 
 @end
 
@@ -37,6 +37,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
     _dataSource = dataSource;
     _mapDelegate = delegate;
+    _annotationViews = [NSMutableDictionary dictionary];
 
     [self viewSetup];
     [self setupGestures];
@@ -107,11 +108,9 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 //                         }];
     }
 
-    if (!self.annotationViews) {
-        self.annotationViews = [[NSMutableArray alloc] init];
-    }
 
-    [self.annotationViews addObject:annontationView];
+
+    [self.annotationViews setObject:annontationView forKey:annotation];
     [self bringSubviewToFront:self.calloutView];
 }
 
@@ -139,12 +138,12 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
 - (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
 {
-     for (NAPinAnnotationView *annotationView in self.annotationViews) {
-         if (annotationView.annotation == annotation) {
-             return annotationView;
+     for(NAAnnotation *annotation in self.annotationViews.allKeys){
+         if([[annotation representedObject] isEqual:annotation.representedObject]) {
+             return self.annotationViews[annotation];
          }
      }
-     return nil;
+    return nil;
 }
 
 - (void)removeAnnotation:(NAAnnotation *)annotation
@@ -154,7 +153,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
         if ([annotationView respondsToSelector:@selector(annotation)] && annotationView.annotation == annotation) {
             [annotationView removeFromSuperview];
             [self removeObserver:annotationView forKeyPath:@"contentSize"];
-            [self.annotationViews removeObject:annotationView];
+            [self.annotationViews removeObjectForKey:annotation];
             break;
         }
     }
