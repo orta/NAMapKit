@@ -24,6 +24,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 @property (nonatomic, strong) UIImageView *backingView;
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
+@property (nonatomic, strong) NSMapTable *annotationsMap;
 @end
 
 @implementation NAMapView
@@ -35,14 +36,13 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
     _dataSource = dataSource;
     _mapDelegate = delegate;
-    _annotationViews = [NSMapTable strongToStrongObjectsMapTable];
+    _annotationsMap = [NSMapTable strongToStrongObjectsMapTable];
 
     [self viewSetup];
     [self setupGestures];
 
     return self;
 }
-
 
 - (void)viewSetup
 {
@@ -106,9 +106,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 //                         }];
     }
 
-
-
-    [self.annotationViews setObject:annontationView forKey:annotation];
+    [self.annotationsMap setObject:annontationView forKey:annotation];
     [self bringSubviewToFront:self.calloutView];
 }
 
@@ -119,8 +117,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     for (NAAnnotation *annotation in annotations) {
         if (animate) {
             [self performSelector:@selector(addAnimatedAnnontation:) withObject:annotation afterDelay:(NA_PIN_ANIMATION_DURATION * (i++ / 2.0f))];
-        }
-        else {
+        } else {
             [self addAnnotation:annotation animated:NO];
         }
     }
@@ -133,19 +130,30 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
      [self _showCallOutForAnnontationView:selectedView animated:animate];
 }
 
-
-- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
+- (NAPinAnnotationView *)viewForPoint:(CGPoint)point andRepresentedObject:(id)representedObject
 {
-    // TODO: should be able to fetch annoting without iterating through the whole thing
-    //       return [self.annotationViews objectForKey:annotation];
-
-    for(NAAnnotation *existingAnnotation in self.annotationViews.keyEnumerator) {
-        if (CGPointEqualToPoint(existingAnnotation.point, annotation.point) && [existingAnnotation.representedObject isEqual:annotation.representedObject]) {
-            return [self.annotationViews objectForKey:existingAnnotation];
+    for(NAAnnotation *annotation in self.annotations) {
+        if (CGPointEqualToPoint(point, annotation.point) && [annotation.representedObject isEqual:representedObject]) {
+            return [self.annotationsMap objectForKey:annotation];
         }
     }
     
     return nil;
+}
+
+- (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
+{
+    return [self.annotationsMap objectForKey:annotation];
+}
+
+-(NSEnumerator *)annotationViews
+{
+    return [self.annotationsMap objectEnumerator];
+}
+
+-(NSEnumerator *)annotations
+{
+    return [self.annotationsMap keyEnumerator];
 }
 
 - (void)removeAnnotation:(NAAnnotation *)annotation
@@ -155,12 +163,11 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
         if ([annotationView respondsToSelector:@selector(annotation)] && annotationView.annotation == annotation) {
             [annotationView removeFromSuperview];
             [self removeObserver:annotationView forKeyPath:@"contentSize"];
-            [self.annotationViews removeObjectForKey:annotation];
+            [self.annotationsMap removeObjectForKey:annotation];
             break;
         }
     }
 }
-
 
 - (void)removeAnnotations:(NSArray *)annotations
 {
@@ -189,7 +196,9 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 - (void)_showCallOutForAnnontationView:(NAPinAnnotationView *)annontationView animated:(BOOL)animated
 {
 
-    if (annontationView == nil) {return;}
+    if (annontationView == nil) {
+        return;
+    }
 
     NAAnnotation *annotation = annontationView.annotation;
 
@@ -226,11 +235,9 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
      self.calloutView.hidden = YES;
 }
 
-
-
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    if (!self.dragging) {
+    if (! self.dragging) {
         [self hideCallOut];
     }
 
@@ -242,7 +249,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 
 - (void)setBackingImageURL:(NSURL *)backingImageURL
 {
-    if(!self.backingView){
+    if(! self.backingView){
         UIImageView *backingView = [[UIImageView alloc] initWithFrame:self.imageView.frame];
         [self insertSubview:backingView belowSubview:self.imageView];
         self.backingView = backingView;
@@ -260,7 +267,6 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     return CGPointMake(round(x), round(y));
 }
 
-
 - (void)dealloc
 {
     for (NAPinAnnotationView *annotationView in self.annotationViews) {
@@ -271,7 +277,6 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
         [self removeObserver:self.calloutView forKeyPath:@"contentSize"];
     }
 }
-
 
 #pragma mark - NSTiledImageViewDelegate
 
