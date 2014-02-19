@@ -29,8 +29,6 @@
 @property (nonatomic, weak) NSObject <NATiledImageViewDataSource> *dataSource;
 @property (nonatomic, weak) NSObject <NAMapViewDelegate> *mapDelegate;
 
-@property (readonly, nonatomic, strong) NSMapTable *annotationViews;
-
 @property (nonatomic, strong) NSURL *backingImageURL;
 
 - (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
@@ -38,7 +36,12 @@
 - (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate;
 - (void)removeAnnotation:(NAAnnotation *)annotation;
 - (void)removeAnnotations:(NSArray *)annotations;
+
 - (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation;
+- (NAPinAnnotationView *)viewForPoint:(CGPoint)point andRepresentedObject:(id)representedObject;
+
+@property (nonatomic, strong) NSEnumerator *annotationViews;
+@property (nonatomic, strong) NSEnumerator *annotations;
 
 - (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate;
 - (CGPoint)zoomRelativePoint:(CGPoint)point;
