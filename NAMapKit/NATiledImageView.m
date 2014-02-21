@@ -174,8 +174,12 @@
 
         id<SDWebImageOperation> operation = nil;
         operation = [SDWebImageManager.sharedManager downloadWithURL:tileURL options:0 progress:nil completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished) {
-            if(error) NSLog(@"NATiledImageView: Error downloading tile at URL %@ - %@", tileURL, error.localizedDescription);
-            if (!wself || !finished || error) return;
+            if (!wself || !finished ) return;
+
+            if (error){
+                // Ideally we want to mke sure this doesn't happen multiple times
+                [wself performSelector:_cmd withObject:arrayOfURLs afterDelay:1];
+            }
 
             void (^block)(void) = ^{
                 __strong typeof(wself) sself = wself;
