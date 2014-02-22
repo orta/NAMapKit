@@ -179,7 +179,6 @@
             if (error){
                 // Ideally we want to mke sure this doesn't happen multiple times
                 [wself performSelector:_cmd withObject:arrayOfURLs afterDelay:1];
-                return;
             }
 
             void (^block)(void) = ^{

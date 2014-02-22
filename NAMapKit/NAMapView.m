@@ -25,6 +25,8 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 @property (nonatomic, strong) NACallOutView *calloutView;
 @property (nonatomic, strong) UIView *annotationView;
 @property (nonatomic, strong) NSMapTable *annotationsMap;
+@property (nonatomic, assign) CGPoint centerPoint;
+
 @end
 
 @implementation NAMapView
@@ -58,6 +60,8 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     [self addObserver:self.calloutView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
 
     [self addSubview:self.calloutView];
+
+    [self.panGestureRecognizer addTarget:self action:@selector(mapPanGestureHandler:)];
 }
 
 - (void)setupGestures
@@ -218,14 +222,31 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     [UIView animateWithDuration:animationDuration animations:^{
         self.calloutView.transform = CGAffineTransformIdentity;
     }];
-
 }
 
+- (void)setFrame:(CGRect)frame
+{
+    [super setFrame:frame];
+
+    BOOL zoomedOut = self.zoomScale == self.minimumZoomScale;
+    if (!CGPointEqualToPoint(self.centerPoint, CGPointZero) && !zoomedOut) {
+        [self centreOnPoint:self.centerPoint animated:NO];
+    }
+}
+
+- (void)mapPanGestureHandler:(UIPanGestureRecognizer *)panGesture
+{
+    if (panGesture.state == UIGestureRecognizerStateBegan){
+        self.centerPoint = CGPointZero;
+    }
+}
 
 - (void)centreOnPoint:(CGPoint)point animated:(BOOL)animate
 {
-    CGFloat x = (point.x * self.zoomScale) - (self.frame.size.width / 2.0f);
-    CGFloat y = (point.y * self.zoomScale) - (self.frame.size.height / 2.0f);
+    CGFloat height = self.frame.size.height ?: 240;
+    CGFloat x = (point.x * self.zoomScale) - (self.frame.size.width / 2.0);
+    CGFloat y = (point.y * self.zoomScale) - (height / 2.0);
+    self.centerPoint = point;
     [self setContentOffset:CGPointMake(roundf(x), roundf(y)) animated:animate];
 }
 
@@ -317,7 +338,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
 }
 
 
- - (CGRect)rectAroundPoint:(CGPoint)point atZoomScale:(CGFloat)zoomScale {
+- (CGRect)rectAroundPoint:(CGPoint)point atZoomScale:(CGFloat)zoomScale {
 
      // Define the shape of the zoom rect.
      CGSize boundsSize = self.bounds.size;
