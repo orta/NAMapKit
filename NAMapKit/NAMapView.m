@@ -90,7 +90,7 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     annontationView.mapView = self;
     annontationView.annotation = annotation;
     [annontationView updatePosition];
-    [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchDown];
+    [annontationView addTarget:self action:@selector(showCallOut:) forControlEvents:UIControlEventTouchUpInside];
 
     [self addObserver:annontationView forKeyPath:@"contentSize" options:NSKeyValueObservingOptionNew context:nil];
 
