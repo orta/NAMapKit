@@ -31,6 +31,8 @@
 
 @property (nonatomic, strong) NSURL *backingImageURL;
 
+@property (nonatomic, readonly) NSInteger annotationsCount;
+
 - (void)selectAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotation:(NAAnnotation *)annotation animated:(BOOL)animate;
 - (void)addAnnotations:(NSArray *)annotations animated:(BOOL)animate;
@@ -38,7 +40,9 @@
 - (void)removeAnnotations:(NSArray *)annotations;
 
 - (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation;
+- (NAPinAnnotationView *)viewForRepresentedObject:(id)representedObject;
 - (NAPinAnnotationView *)viewForPoint:(CGPoint)point andRepresentedObject:(id)representedObject;
+- (NAAnnotation *)annotationForRepresentedObject:(id)representedObject;
 
 @property (nonatomic, strong) NSEnumerator *annotationViews;
 @property (nonatomic, strong) NSEnumerator *annotations;

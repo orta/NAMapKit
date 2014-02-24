@@ -145,6 +145,28 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     return nil;
 }
 
+- (NAAnnotation *)annotationForRepresentedObject:(id)representedObject
+{
+    for(NAAnnotation *annotation in self.annotations) {
+        if ([annotation.representedObject isEqual:representedObject]) {
+            return annotation;
+        }
+    }
+    
+    return nil;
+}
+
+- (NAPinAnnotationView *)viewForRepresentedObject:(id)representedObject
+{
+    for(NAAnnotation *annotation in self.annotations) {
+        if ([annotation.representedObject isEqual:representedObject]) {
+            return [self.annotationsMap objectForKey:annotation];
+        }
+    }
+    
+    return nil;
+}
+
 - (NAPinAnnotationView *)viewForAnnotation:(NAAnnotation *)annotation
 {
     return [self.annotationsMap objectForKey:annotation];
@@ -160,16 +182,19 @@ static const CGFloat NAZoomMultiplierForDoubleTap = 2.5;
     return [self.annotationsMap keyEnumerator];
 }
 
+-(NSInteger) annotationsCount
+{
+    return self.annotationsMap.count;
+}
+
 - (void)removeAnnotation:(NAAnnotation *)annotation
 {
     [self hideCallOut];
-    for (NAPinAnnotationView *annotationView in self.annotationViews) {
-        if ([annotationView respondsToSelector:@selector(annotation)] && annotationView.annotation == annotation) {
-            [annotationView removeFromSuperview];
-            [self removeObserver:annotationView forKeyPath:@"contentSize"];
-            [self.annotationsMap removeObjectForKey:annotation];
-            break;
-        }
+    NAPinAnnotationView *annotationView = [self viewForAnnotation:annotation];
+    if (annotationView) {
+        [annotationView removeFromSuperview];
+        [self removeObserver:annotationView forKeyPath:@"contentSize"];
+        [self.annotationsMap removeObjectForKey:annotation];
     }
 }
 
